@@ -1,4 +1,4 @@
-# ChainSleuth — AI-Powered On-Chain Forensics Copilot
+# ChainSleuth — IS AN AI-Powered On-Chain Forensics Copilot
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Polygon EVM](https://img.shields.io/badge/Network-Polygon%20%7C%20EVM-purple.svg)](https://polygonscan.com)
