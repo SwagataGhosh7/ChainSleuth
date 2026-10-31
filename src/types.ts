@@ -108,6 +108,7 @@ export interface SystemHealth {
     renderApi: { status: string; environment: string; port: number };
     digitalOceanPostgres: { status: string; ssl: boolean; configured: boolean };
     backboardMemory: { status: string; configured: boolean };
+    polygonscanExplorer?: { status: string; configured: boolean; provider: string };
     aiInference: { status: string; tinkerConfigured: boolean; geminiConfigured: boolean; activeModel: string };
   };
 }

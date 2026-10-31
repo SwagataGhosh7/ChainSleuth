@@ -36,6 +36,11 @@ export function createApiRouter() {
           status: backboardService.isConfigured ? 'active' : 'local_cache_active',
           configured: backboardService.isConfigured,
         },
+        polygonscanExplorer: {
+          status: blockchainService.hasApiKey ? 'live_api_active' : 'fallback_dataset_active',
+          configured: blockchainService.hasApiKey,
+          provider: 'Etherscan / Polygonscan v2 API',
+        },
         aiInference: {
           status: aiService.hasTinker ? 'tinker_active' : aiService.hasGemini ? 'gemini_active' : 'heuristic_engine_active',
           tinkerConfigured: aiService.hasTinker,

@@ -140,6 +140,14 @@ export class BlockchainService {
     this.polygonscanApiKey = process.env.POLYGONSCAN_API_KEY || '';
   }
 
+  get hasApiKey(): boolean {
+    return Boolean(this.getApiKey());
+  }
+
+  getApiKey(): string {
+    return (process.env.POLYGONSCAN_API_KEY || this.polygonscanApiKey || '').trim();
+  }
+
   /**
    * Fetches normal and internal transactions for a wallet or generates multi-hop graph
    */
@@ -152,11 +160,12 @@ export class BlockchainService {
     source: 'live_polygonscan' | 'demo_heist_dataset';
   }> {
     const cleanAddress = (walletAddress || '').trim().toLowerCase();
+    const apiKey = this.getApiKey();
 
     // If matching demo heist address or no API key, use realistic dataset
     if (
       cleanAddress === SAMPLE_HEIST_WALLET.toLowerCase() ||
-      !this.polygonscanApiKey ||
+      !apiKey ||
       cleanAddress.startsWith('0x0000') ||
       cleanAddress.length < 10
     ) {
@@ -164,13 +173,14 @@ export class BlockchainService {
     }
 
     try {
-      // Live Polygonscan or Etherscan fetch
-      const baseUrl = network === 'ethereum'
-        ? 'https://api.etherscan.io/api'
-        : 'https://api.polygonscan.com/api';
+      // Etherscan v2 unified API supports chainid=137 for Polygon and chainid=1 for Ethereum
+      const chainId = network === 'ethereum' ? '1' : '137';
+      const v2Url = 'https://api.etherscan.io/v2/api';
 
-      const response = await axios.get(baseUrl, {
+      // 1. Fetch native EVM transactions
+      const txResponse = await axios.get(v2Url, {
         params: {
+          chainid: chainId,
           module: 'account',
           action: 'txlist',
           address: cleanAddress,
@@ -179,44 +189,96 @@ export class BlockchainService {
           page: 1,
           offset: 50,
           sort: 'asc',
-          apikey: this.polygonscanApiKey,
+          apikey: apiKey,
         },
-        timeout: 7000,
+        timeout: 8000,
       });
 
-      if (
-        response.data &&
-        response.data.status === '1' &&
-        Array.isArray(response.data.result) &&
-        response.data.result.length > 0
-      ) {
-        const txs: RawTransaction[] = response.data.result.map((tx: any) => ({
-          hash: tx.hash,
-          from: tx.from,
-          to: tx.to,
-          value: tx.value,
-          timeStamp: tx.timeStamp,
-          blockNumber: tx.blockNumber,
-          isInternal: false,
-        }));
+      const rawTxs: RawTransaction[] = [];
+      const seenHashes = new Set<string>();
 
-        const analysis = analyzeTransactions(cleanAddress, txs);
-        const summary = `Completed live on-chain forensic scan of ${cleanAddress} on ${network.toUpperCase()}. Identified ${txs.length} transactions across ${analysis.nodes.length} entities. Calculated threat risk score: ${analysis.riskScore}/100.`;
+      if (
+        txResponse.data &&
+        txResponse.data.status === '1' &&
+        Array.isArray(txResponse.data.result)
+      ) {
+        for (const tx of txResponse.data.result) {
+          if (!seenHashes.has(tx.hash)) {
+            seenHashes.add(tx.hash);
+            rawTxs.push({
+              hash: tx.hash,
+              from: tx.from,
+              to: tx.to,
+              value: tx.value,
+              timeStamp: tx.timeStamp,
+              blockNumber: tx.blockNumber,
+              isInternal: false,
+            });
+          }
+        }
+      }
+
+      // 2. Also fetch ERC-20 token transfers (USDT, USDC, etc.) for comprehensive AML forensics
+      try {
+        const tokenResponse = await axios.get(v2Url, {
+          params: {
+            chainid: chainId,
+            module: 'account',
+            action: 'tokentx',
+            address: cleanAddress,
+            startblock: 0,
+            endblock: 99999999,
+            page: 1,
+            offset: 25,
+            sort: 'desc',
+            apikey: apiKey,
+          },
+          timeout: 6000,
+        });
+
+        if (
+          tokenResponse.data &&
+          tokenResponse.data.status === '1' &&
+          Array.isArray(tokenResponse.data.result)
+        ) {
+          for (const tx of tokenResponse.data.result) {
+            if (!seenHashes.has(tx.hash)) {
+              seenHashes.add(tx.hash);
+              rawTxs.push({
+                hash: tx.hash,
+                from: tx.from,
+                to: tx.to,
+                value: tx.value,
+                timeStamp: tx.timeStamp,
+                blockNumber: tx.blockNumber,
+                isInternal: true,
+              });
+            }
+          }
+        }
+      } catch {
+        // Non-fatal if token transfer fetch fails
+      }
+
+      if (rawTxs.length > 0) {
+        const analysis = analyzeTransactions(cleanAddress, rawTxs);
+        const networkLabel = network.toUpperCase();
+        const summary = `Completed live on-chain forensic scan of ${cleanAddress} on ${networkLabel} via Polygonscan / Etherscan v2 API. Identified ${rawTxs.length} transactions across ${analysis.nodes.length} entities. Calculated threat risk score: ${analysis.riskScore}/100.`;
 
         return {
           walletAddress: cleanAddress,
           network,
           summary,
-          rawTransactions: txs,
+          rawTransactions: rawTxs,
           analysis,
           source: 'live_polygonscan',
         };
       } else {
-        // Fallback to sample heist if empty address or error response
+        // Fallback to sample heist if empty address or no transactions found
         return this.getDemoExploitCase(cleanAddress);
       }
     } catch (err) {
-      console.warn('Polygonscan query failed or rate-limited; falling back to demo heist graph:', (err as any)?.message);
+      console.warn('Polygonscan/Etherscan query failed; falling back to demo heist graph:', (err as any)?.message);
       return this.getDemoExploitCase(cleanAddress);
     }
   }

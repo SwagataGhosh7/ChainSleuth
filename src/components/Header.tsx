@@ -173,6 +173,21 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${getStatusColor(
+              systemHealth?.connections.polygonscanExplorer?.status || 'active'
+            )}`}
+            title="Polygonscan / Etherscan v2 On-Chain Explorer API"
+          >
+            <Zap className="w-3 h-3 text-[#d2a8ff]" />
+            <span>
+              Explorer:{' '}
+              {systemHealth?.connections.polygonscanExplorer?.configured
+                ? 'Polygonscan'
+                : 'Demo RPC'}
+            </span>
+          </div>
+
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${getStatusColor(
               systemHealth?.connections.aiInference.status
             )}`}
             title="Gemini 2.5 Flash / Tinker Reasoning Engine"
