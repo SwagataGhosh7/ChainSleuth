@@ -40,8 +40,17 @@ export class AIService {
 
   private initGeminiClient(): GoogleGenAI | null {
     if (this.geminiClient) return this.geminiClient;
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (apiKey && apiKey.trim().length > 0 && apiKey !== 'MY_GEMINI_API_KEY') {
+    const rawApiKey =
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_GENAI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.API_KEY ||
+      process.env.VITE_GEMINI_API_KEY;
+
+    if (!rawApiKey) return null;
+    const apiKey = rawApiKey.replace(/^['"]|['"]$/g, '').trim();
+
+    if (apiKey && apiKey.length > 0 && apiKey !== 'MY_GEMINI_API_KEY') {
       try {
         this.geminiClient = new GoogleGenAI({
           apiKey,
@@ -121,12 +130,12 @@ export class AIService {
     const client = this.initGeminiClient();
     if (!client) return null;
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
 
     for (let i = 0; i < candidateModels.length; i++) {
       const model = candidateModels[i];
-      // 10s attempt timeout for gemini-3.8-flash allowing rapid failover if 3.8 is busy; 45s for 3.1-flash-lite
-      const attemptTimeout = i === 0 ? 10000 : 45000;
+      // 10s attempt timeout for first model allowing rapid failover if busy; 30s for subsequent fallbacks
+      const attemptTimeout = i === 0 ? 10000 : 30000;
       let timer: NodeJS.Timeout | null = null;
 
       try {
