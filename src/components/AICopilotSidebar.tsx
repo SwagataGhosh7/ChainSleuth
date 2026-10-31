@@ -125,81 +125,85 @@ export const AICopilotSidebar: React.FC<AICopilotSidebarProps> = ({
   };
 
   return (
-    <div className="bg-[#161b22] border border-[#30363d] rounded-xl flex flex-col h-[820px] shadow-sm overflow-hidden">
-      {/* Sidebar Header & Tab Switches */}
-      <div className="p-3.5 border-b border-[#30363d] bg-[#161b22]/90 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 p-0.5 bg-[#0d1117] rounded-lg border border-[#30363d]">
+    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl flex flex-col h-full min-h-[600px] shadow-lg overflow-hidden">
+      {/* Sidebar Header & Tabs */}
+      <div className="border-b border-[#21262d] bg-[#161b22] p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[#1f6feb]/20 border border-[#388bfd]/30 flex items-center justify-center text-[#58a6ff]">
+            <Brain className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-xs font-bold text-[#f0f6fc] font-sans">AI Detective Copilot</h2>
+            <p className="text-[10px] font-mono text-[#8b949e]">
+              Backboard Case Memory Active
+            </p>
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex items-center p-0.5 bg-[#0d1117] border border-[#30363d] rounded-lg text-xs font-mono">
           <button
             onClick={() => setActiveTab('copilot')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded transition-colors ${
               activeTab === 'copilot'
-                ? 'bg-[#21262d] text-[#58a6ff] shadow-sm'
-                : 'text-[#8b949e] hover:text-[#f0f6fc]'
+                ? 'bg-[#21262d] text-[#f0f6fc] font-semibold'
+                : 'text-[#8b949e] hover:text-[#c9d1d9]'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Copilot</span>
+            Copilot
           </button>
           <button
             onClick={() => setActiveTab('case_notes')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1 ${
               activeTab === 'case_notes'
-                ? 'bg-[#21262d] text-[#58a6ff] shadow-sm'
-                : 'text-[#8b949e] hover:text-[#f0f6fc]'
+                ? 'bg-[#21262d] text-[#f0f6fc] font-semibold'
+                : 'text-[#8b949e] hover:text-[#c9d1d9]'
             }`}
           >
-            <Bookmark className="w-3.5 h-3.5" />
-            <span>Case Notes & Tags ({walletTags.length + caseNotes.length})</span>
+            <span>Notes</span>
+            {caseNotes.length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[#1f6feb] text-white text-[9px] flex items-center justify-center font-bold">
+                {caseNotes.length}
+              </span>
+            )}
           </button>
-        </div>
-
-        {/* Backboard Memory Status Badge */}
-        <div
-          className="flex items-center gap-1.5 text-[11px] font-mono text-[#3fb950] bg-[#238636]/10 border border-[#238636]/30 px-2 py-1 rounded"
-          title="Backboard Persistent Long-Term Case Memory is active"
-        >
-          <Brain className="w-3.5 h-3.5 text-[#3fb950]" />
-          <span className="hidden sm:inline">Backboard Memory:</span> Active
         </div>
       </div>
 
-      {/* Selected Node Inspector Drawer (If Node is Selected) */}
+      {/* Selected Node Inspector Card */}
       {selectedNode && (
-        <div className="p-3 bg-[#0d1117] border-b border-[#30363d] space-y-2.5 animate-fadeIn">
+        <div className="p-3 bg-[#0d1117] border-b border-[#21262d] space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#f0f6fc]">
-              <Shield className="w-3.5 h-3.5 text-[#58a6ff]" />
-              <span>Inspecting Node:</span>
-              <span className="font-mono text-[#58a6ff]">
-                {selectedNode.id.slice(0, 6)}...{selectedNode.id.slice(-4)}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 uppercase">
+                {selectedNode.category}
+              </span>
+              <span className="text-xs font-mono font-bold text-[#f0f6fc] truncate">
+                {selectedNode.alias || `${selectedNode.id.slice(0, 8)}...${selectedNode.id.slice(-6)}`}
               </span>
             </div>
             <button
               onClick={onClearSelectedNode}
-              className="text-xs text-[#8b949e] hover:text-[#f0f6fc] font-mono"
+              className="text-[11px] font-mono text-[#8b949e] hover:text-[#f0f6fc]"
             >
-              Close ×
+              Clear
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
-            <div className="bg-[#161b22] p-1.5 rounded border border-[#30363d]">
-              <span className="text-[#8b949e] block text-[9px]">CATEGORY</span>
-              <span className="font-bold text-[#f0f6fc]">{selectedNode.category}</span>
-            </div>
-            <div className="bg-[#161b22] p-1.5 rounded border border-[#30363d]">
-              <span className="text-[#8b949e] block text-[9px]">RISK SCORE</span>
-              <span className={`font-bold ${selectedNode.riskScore >= 80 ? 'text-[#ff7b72]' : 'text-[#d29922]'}`}>
+          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#8b949e]">
+            <div>
+              <span>Risk: </span>
+              <span className="font-bold text-[#f85149]">
                 {selectedNode.riskScore}/100
               </span>
             </div>
-            <div className="bg-[#161b22] p-1.5 rounded border border-[#30363d]">
-              <span className="text-[#8b949e] block text-[9px]">BALANCE</span>
-              <span className="font-bold text-[#f0f6fc] tabular-nums">
-                {selectedNode.balanceMatic > 1000
+            <div>
+              <span>Balance: </span>
+              <span className="font-bold text-[#f0f6fc]">
+                {selectedNode.balanceMatic >= 1000
                   ? `${(selectedNode.balanceMatic / 1000).toFixed(0)}k`
                   : selectedNode.balanceMatic.toFixed(0)}{' '}
-                M
+                MATIC
               </span>
             </div>
           </div>
@@ -310,7 +314,7 @@ export const AICopilotSidebar: React.FC<AICopilotSidebarProps> = ({
                       : 'bg-[#0d1117] border border-[#30363d] text-[#f0f6fc]'
                   }`}
                 >
-                  {/* Formatted Markdown text lines */}
+                  {/* Formatted text lines */}
                   <div className="prose prose-invert prose-xs max-w-none space-y-1.5 whitespace-pre-wrap font-sans">
                     {msg.content}
                   </div>
@@ -344,131 +348,59 @@ export const AICopilotSidebar: React.FC<AICopilotSidebarProps> = ({
           </div>
 
           {/* Chat Input Bar */}
-          <form
-            onSubmit={handleSend}
-            className="p-3 border-t border-[#30363d] bg-[#161b22] flex items-center gap-2"
-          >
+          <form onSubmit={handleSend} className="p-3 border-t border-[#30363d] bg-[#161b22] flex items-center gap-2">
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Ask the AI Detective anything about this transaction graph..."
-              className="flex-1 bg-[#0d1117] border border-[#30363d] focus:border-[#58a6ff] rounded-lg px-3 py-2 text-xs text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none"
+              placeholder="Ask investigator copilot a forensic inquiry..."
+              className="flex-1 bg-[#0d1117] border border-[#30363d] focus:border-[#58a6ff] rounded-lg px-3 py-2 text-xs font-mono text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none"
             />
             <button
               type="submit"
               disabled={isChatLoading || !inputText.trim()}
-              className="px-3.5 py-2 text-xs font-semibold text-white bg-[#1f6feb] hover:bg-[#388bfd] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+              className="p-2 text-white bg-[#1f6feb] hover:bg-[#388bfd] disabled:opacity-50 rounded-lg transition-colors"
+              title="Send Inquiry"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>Ask</span>
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
       ) : (
-        /* Case Notes & Saved Tags Tab */
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {/* Add Investigator Note Form */}
-          <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-3.5 space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#f0f6fc]">
-              <Pin className="w-3.5 h-3.5 text-[#58a6ff]" />
-              <span>Add Case Note (Stored in Backboard & PostgreSQL)</span>
-            </div>
-            <form onSubmit={handleAddNote} className="space-y-2">
-              <textarea
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                placeholder="Log investigator observations, subpoena references, or off-chain entity intelligence..."
-                rows={3}
-                className="w-full bg-[#161b22] border border-[#30363d] rounded-lg p-2.5 text-xs text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none focus:border-[#58a6ff]"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isSubmittingNote || !noteInput.trim()}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 rounded-lg transition-colors flex items-center gap-1"
-                >
-                  <Bookmark className="w-3.5 h-3.5" />
-                  <span>Pin Case Note</span>
-                </button>
-              </div>
-            </form>
-          </div>
+        /* Case Notes Tab */
+        <div className="flex-1 flex flex-col min-h-0 p-3 space-y-3">
+          <form onSubmit={handleAddNote} className="space-y-2">
+            <textarea
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              placeholder="Record pinned investigator observation, warrant tag, or subpoena note..."
+              rows={3}
+              className="w-full bg-[#0d1117] border border-[#30363d] focus:border-[#58a6ff] rounded-lg p-2.5 text-xs font-mono text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={isSubmittingNote || !noteInput.trim()}
+              className="w-full py-1.5 text-xs font-semibold text-white bg-[#238636] hover:bg-[#2ea043] disabled:opacity-50 rounded-lg transition-colors"
+            >
+              Pin Case Note
+            </button>
+          </form>
 
-          {/* Investigator Wallet Tags Section */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-[#f0f6fc] flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-[#58a6ff]" />
-                <span>Tagged Entities & Aliases ({walletTags.length})</span>
-              </span>
-              <span className="text-[10px] font-mono text-[#8b949e]">Synced to Backboard</span>
-            </div>
-
-            {walletTags.length === 0 ? (
-              <div className="text-xs text-[#8b949e] py-3 text-center border border-dashed border-[#30363d] rounded-lg">
-                No custom wallet tags recorded yet. Select any node in the graph to add an alias.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {walletTags.map((t) => (
-                  <div
-                    key={t.id}
-                    className="p-2 bg-[#0d1117] border border-[#30363d] rounded-lg flex items-start justify-between text-xs"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[#f0f6fc]">{t.tag}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">
-                          {t.category}
-                        </span>
-                      </div>
-                      <div className="text-[11px] font-mono text-[#58a6ff] mt-0.5">
-                        {t.walletAddress}
-                      </div>
-                      {t.notes && <div className="text-xs text-[#8b949e] mt-1">{t.notes}</div>}
-                    </div>
-                    <span className="text-[10px] font-mono text-[#6e7681] shrink-0">
-                      by {t.investigator}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Pinned Case Notes List */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-[#f0f6fc] flex items-center gap-1.5">
-              <Bookmark className="w-3.5 h-3.5 text-[#58a6ff]" />
-              <span>Investigator Case Log ({caseNotes.length})</span>
-            </div>
-
+          <div className="flex-1 overflow-y-auto space-y-2">
             {caseNotes.length === 0 ? (
-              <div className="text-xs text-[#8b949e] py-3 text-center border border-dashed border-[#30363d] rounded-lg">
-                No case notes logged.
+              <div className="py-12 text-center text-xs text-[#8b949e]">
+                No case notes pinned yet. Notes recorded here persist across investigator sessions.
               </div>
             ) : (
-              <div className="space-y-2">
-                {caseNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className={`p-3 rounded-lg border text-xs ${
-                      note.pinned
-                        ? 'bg-[#0d1117] border-[#388bfd]/40'
-                        : 'bg-[#0d1117] border-[#30363d]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] text-[#8b949e] mb-1 font-mono">
-                      <span className="font-semibold text-[#c9d1d9]">{note.author}</span>
-                      <span>{new Date(note.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-[#f0f6fc] leading-relaxed whitespace-pre-wrap">
-                      {note.content}
-                    </p>
+              caseNotes.map((note) => (
+                <div key={note.id} className="p-2.5 rounded-lg bg-[#0d1117] border border-[#30363d] text-xs font-mono">
+                  <div className="flex items-center justify-between text-[10px] text-[#8b949e] mb-1">
+                    <span>{note.author}</span>
+                    <span>{new Date(note.createdAt).toLocaleDateString()}</span>
                   </div>
-                ))}
-              </div>
+                  <p className="text-[#f0f6fc] whitespace-pre-wrap">{note.content}</p>
+                </div>
+              ))
             )}
           </div>
         </div>

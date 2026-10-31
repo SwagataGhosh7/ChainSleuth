@@ -1,6 +1,7 @@
 /**
  * Interactive SVG/Canvas Multi-Hop Transaction Graph Visualizer
  * Force-directed layout mapping wallets, peel hops, mixer pools, and cashout routes.
+ * Features Visual Heatmap Overlay scaling with Risk Score relative to Laundering Volume.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -79,38 +80,38 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     // 1. Root at left-center
     if (rootNode) {
-      positions.set(rootNode.id, { x: 100, y: centerY });
+      positions.set(rootNode.id.toLowerCase(), { x: 100, y: centerY });
     }
 
     // 2. Peel nodes layered horizontally
     peelNodes.forEach((node, idx) => {
       const stepX = 260 + idx * 170;
       const stepY = centerY + (idx % 2 === 0 ? -40 : 40);
-      positions.set(node.id, { x: stepX, y: stepY });
+      positions.set(node.id.toLowerCase(), { x: stepX, y: stepY });
     });
 
     // 3. Mixer nodes placed towards top
     mixerNodes.forEach((node, idx) => {
-      positions.set(node.id, { x: 380 + idx * 140, y: 90 + (idx % 2) * 50 });
+      positions.set(node.id.toLowerCase(), { x: 380 + idx * 140, y: 90 + (idx % 2) * 50 });
     });
 
     // 4. Burner nodes placed towards right
     burnerNodes.forEach((node, idx) => {
-      positions.set(node.id, { x: 620, y: 150 + idx * 75 });
+      positions.set(node.id.toLowerCase(), { x: 620, y: 150 + idx * 75 });
     });
 
     // 5. Exchange cashouts placed at far right
     exchangeNodes.forEach((node, idx) => {
-      positions.set(node.id, { x: 780, y: 220 + idx * 100 });
+      positions.set(node.id.toLowerCase(), { x: 780, y: 220 + idx * 100 });
     });
 
     // 6. Others distributed
     others.forEach((node, idx) => {
-      positions.set(node.id, { x: 180 + idx * 80, y: 380 + (idx % 2) * 40 });
+      positions.set(node.id.toLowerCase(), { x: 180 + idx * 80, y: 380 + (idx % 2) * 40 });
     });
 
     return nodes.map((node) => {
-      const pos = positions.get(node.id) || {
+      const pos = positions.get(node.id.toLowerCase()) || {
         x: centerX + (Math.random() - 0.5) * 300,
         y: centerY + (Math.random() - 0.5) * 200,
       };
@@ -303,128 +304,90 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-            <div className="w-[1px] h-4 bg-[#30363d] mx-0.5" />
+            <div className="w-[1px] h-3.5 bg-[#30363d] mx-0.5" />
             <button
               onClick={zoomToFit}
               className="p-1.5 hover:bg-[#30363d] text-[#8b949e] hover:text-[#f0f6fc] rounded transition-colors"
-              title="Zoom to Fit Entire Graph"
-              aria-label="Zoom to Fit"
+              title="Fit to Screen"
+              aria-label="Fit to Screen"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={resetView}
               className="p-1.5 hover:bg-[#30363d] text-[#8b949e] hover:text-[#f0f6fc] rounded transition-colors"
-              title="Reset Zoom & Pan to Center"
+              title="Reset View"
               aria-label="Reset View"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {/* Directional Pan Navigation Controls */}
-          <div className="bg-[#161b22]/95 backdrop-blur border border-[#30363d] p-1 rounded-lg flex items-center gap-0.5 shadow-md">
-            <button
-              onClick={() => handlePan(60, 0)}
-              className="p-1.5 hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] rounded transition-colors"
-              title="Pan Left"
-              aria-label="Pan Left"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <div className="flex flex-col gap-0.5">
-              <button
-                onClick={() => handlePan(0, 60)}
-                className="p-1 hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] rounded transition-colors"
-                title="Pan Up"
-                aria-label="Pan Up"
-              >
-                <ChevronUp className="w-3 h-3" />
-              </button>
-              <button
-                onClick={() => handlePan(0, -60)}
-                className="p-1 hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] rounded transition-colors"
-                title="Pan Down"
-                aria-label="Pan Down"
-              >
-                <ChevronDown className="w-3 h-3" />
-              </button>
-            </div>
-            <button
-              onClick={() => handlePan(-60, 0)}
-              className="p-1.5 hover:bg-[#30363d] text-[#8b949e] hover:text-[#58a6ff] rounded transition-colors"
-              title="Pan Right"
-              aria-label="Pan Right"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* SVG Canvas */}
+      {/* Main SVG Graph Surface */}
       <div
         ref={containerRef}
+        className="w-full h-full cursor-grab active:cursor-grabbing select-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
-        className="w-full h-full cursor-grab active:cursor-grabbing select-none overflow-hidden"
       >
-        <svg className="w-full h-full">
+        <svg className="w-full h-full block">
           <defs>
-            {/* Arrowhead marker */}
             <marker
               id="arrowhead"
               viewBox="0 0 10 10"
-              refX="22"
+              refX="23"
               refY="5"
               markerWidth="6"
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#58a6ff" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b949e" />
             </marker>
+
             <marker
               id="arrowhead-suspicious"
               viewBox="0 0 10 10"
-              refX="22"
+              refX="23"
               refY="5"
               markerWidth="6"
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ff7b72" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7b72" />
             </marker>
-            {/* Grid Pattern */}
-            <pattern id="graph-grid" width="30" height="30" patternUnits="userSpaceOnUse">
-              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#21262d" strokeWidth="0.5" />
-            </pattern>
-            {/* Heatmap Glow Filter */}
+
+            {/* Gaussian Blur Filter for the Heatmap Glow */}
             <filter id="heatmap-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
+              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
           </defs>
 
-          {/* Background Grid */}
-          <rect width="100%" height="100%" fill="url(#graph-grid)" />
-
-          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+          {/* Background Grid Pattern */}
+          <g
+            transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+            className="transition-transform duration-75"
+          >
             {/* Edges */}
             {edges.map((edge) => {
               const sourcePos = nodePositionMap.get(edge.source.toLowerCase());
               const targetPos = nodePositionMap.get(edge.target.toLowerCase());
-
               if (!sourcePos || !targetPos) return null;
 
               const isHighlighted =
                 selectedNodeId &&
-                (edge.source.toLowerCase() === selectedNodeId.toLowerCase() ||
-                  edge.target.toLowerCase() === selectedNodeId.toLowerCase());
+                (selectedNodeId.toLowerCase() === edge.source.toLowerCase() ||
+                  selectedNodeId.toLowerCase() === edge.target.toLowerCase());
 
-              const isSuspicious = edge.isSuspicious || (edge.valueMatic && edge.valueMatic > 100000);
+              const isSuspicious = edge.isSuspicious;
 
-              // Calculate midpoint for text label
               const midX = (sourcePos.x + targetPos.x) / 2;
               const midY = (sourcePos.y + targetPos.y) / 2;
 
@@ -521,55 +484,57 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                     </>
                   )}
 
-                  {/* Main Node Circle */}
+                  {/* Core Node Circle */}
                   <circle
                     r={radius}
                     fill={getNodeFill(node.category, isSelected)}
                     stroke={getNodeStroke(node.category, isSelected)}
                     strokeWidth={isSelected ? 3 : 2}
-                    className="shadow-lg transition-all duration-150"
+                    className="transition-all duration-150"
                   />
 
-                  {/* Node Short Label inside */}
+                  {/* Inner Icon or Category Letter */}
                   <text
+                    y={3.5}
                     textAnchor="middle"
-                    dy="3"
                     fill="#ffffff"
-                    className="text-[9px] font-bold font-mono pointer-events-none select-none"
+                    className="text-[10px] font-mono font-bold pointer-events-none select-none"
                   >
                     {node.isRoot
-                      ? 'ROOT'
+                      ? '⚡'
+                      : node.category === 'PEEL_HOP'
+                      ? 'HOP'
                       : node.category === 'MIXER'
                       ? 'MIX'
                       : node.category === 'EXCHANGE'
                       ? 'CEX'
-                      : node.category === 'PEEL_HOP'
-                      ? 'PEEL'
                       : node.category === 'BURNER'
-                      ? 'BURN'
-                      : 'NODE'}
+                      ? 'BRN'
+                      : '0x'}
                   </text>
 
-                  {/* Address or Alias Below */}
+                  {/* Node Address / Alias Label Below */}
                   <text
-                    y={baseRadius + 13}
+                    y={radius + 14}
                     textAnchor="middle"
-                    fill={isSelected ? '#58a6ff' : '#c9d1d9'}
-                    className="text-[10px] font-mono pointer-events-none select-none font-medium"
+                    fill={isSelected ? '#ffffff' : '#c9d1d9'}
+                    className={`text-[10px] font-mono pointer-events-none select-none transition-colors ${
+                      isSelected ? 'font-bold' : ''
+                    }`}
                   >
-                    {node.alias ? node.alias : `${node.id.slice(0, 6)}...${node.id.slice(-4)}`}
+                    {node.alias || node.label || `${node.id.slice(0, 6)}...`}
                   </text>
 
-                  {/* Balance badge */}
+                  {/* Node Balance Pill Below */}
                   <text
-                    y={baseRadius + 24}
+                    y={radius + 26}
                     textAnchor="middle"
                     fill="#8b949e"
-                    className="text-[9px] font-mono tabular-nums pointer-events-none select-none"
+                    className="text-[8.5px] font-mono pointer-events-none select-none"
                   >
-                    {node.balanceMatic > 0
+                    {node.balanceMatic >= 1000
                       ? `${(node.balanceMatic / 1000).toFixed(0)}k MATIC`
-                      : '0 MATIC'}
+                      : `${node.balanceMatic.toFixed(0)} MATIC`}
                   </text>
                 </g>
               );
@@ -578,41 +543,34 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </svg>
       </div>
 
-      {/* Bottom Visualizer Legend */}
-      <div className="absolute bottom-2.5 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 bg-[#161b22]/90 backdrop-blur border border-[#30363d] px-3 py-1.5 rounded-lg text-[11px] font-mono text-[#8b949e]">
+      {/* Bottom Category Legend */}
+      <div className="absolute bottom-2.5 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none bg-[#161b22]/90 backdrop-blur border border-[#30363d] px-3 py-1.5 rounded-lg text-[11px] font-mono">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ff7b72]" />
-            <span className="text-[#c9d1d9]">Exploiter Root</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#da3633]" />
+            <span className="text-[#c9d1d9]">Exploit Root</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#d29922]" />
-            <span className="text-[#c9d1d9]">Peel Hop Splitter</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#9e6a03]" />
+            <span className="text-[#c9d1d9]">Peel Splitter</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#d2a8ff]" />
-            <span className="text-[#c9d1d9]">Mixer / Sanctioned</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#8957e5]" />
+            <span className="text-[#c9d1d9]">Privacy Mixer</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#ffa657]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#bd561d]" />
             <span className="text-[#c9d1d9]">Burner Relay</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#7ee787]" />
-            <span className="text-[#c9d1d9]">Exchange CEX Deposit</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#238636]" />
+            <span className="text-[#c9d1d9]">CEX Gateway</span>
           </div>
-
-          {showHeatmap && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0d1117] border border-[#ff7b72]/30 text-[#ff7b72] text-[10px]">
-              <Flame className="w-3 h-3 text-[#ff7b72] animate-pulse" />
-              <span>Heatmap: Glow = Risk Score × Volume Share</span>
-            </div>
-          )}
         </div>
 
-        <div className="text-[10px] text-[#6e7681]">
-          Click node to inspect & filter · Drag to pan · Scroll to zoom
-        </div>
+        <span className="text-[#8b949e] hidden md:inline">
+          Scroll to zoom · Drag to pan · Click node to inspect
+        </span>
       </div>
     </div>
   );

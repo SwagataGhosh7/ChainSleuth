@@ -8,7 +8,7 @@ import { Server as HttpServer } from 'http';
 
 export interface HighRiskAlert {
   id: string;
-  type: 'HIGH_RISK_ALERT';
+  type: 'HIGH_RISK_ALERT' | 'WHALE_ALERT';
   walletAddress: string;
   txHash: string;
   from: string;
@@ -19,6 +19,7 @@ export interface HighRiskAlert {
   heuristic: string;
   description: string;
   timestamp: number;
+  category?: 'ACCUMULATION' | 'MM_OTC' | 'DUMP' | 'EXPLOIT';
 }
 
 interface ClientMeta {

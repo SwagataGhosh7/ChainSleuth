@@ -7,7 +7,7 @@ export interface RawTransaction {
   hash: string;
   from: string;
   to: string;
-  value: string; // in wei or decimal MATIC
+  value: string | number; // in wei or decimal MATIC
   timeStamp: string | number;
   blockNumber?: string | number;
   isInternal?: boolean;
@@ -193,7 +193,7 @@ export function analyzeTransactions(
   // 2. Deterministic AML Heuristics Evaluation
 
   // Heuristic A: Rapid Peel Chains
-  // Pattern: Sequential outgoing transfers within 5 minutes (300s) forwarding > 70% of inbound funds
+  // Pattern: Sequential outgoing transfers within 15 minutes (900s) forwarding > 70% of inbound funds
   let peelChainCount = 0;
   nodeMap.forEach((node) => {
     if (node.isRoot) return;

@@ -120,8 +120,7 @@ export class AIService {
 
   /**
    * Resilient Gemini model cascade:
-   * Queries primary 'gemini-3.8-flash' first. If it encounters a transient spike (503 unavailable)
-   * or exceeds 10s, smoothly cascades to 'gemini-3.1-flash-lite' (high-throughput, ultra-low latency).
+   * Primary 'gemini-3.8-flash' first, smooth cascade to 'gemini-3.1-flash-lite'.
    */
   private async generateWithGeminiCascade(
     contents: string,
@@ -134,7 +133,6 @@ export class AIService {
 
     for (let i = 0; i < candidateModels.length; i++) {
       const model = candidateModels[i];
-      // 10s attempt timeout for first model allowing rapid failover if busy; 30s for subsequent fallbacks
       const attemptTimeout = i === 0 ? 10000 : 30000;
       let timer: NodeJS.Timeout | null = null;
 
@@ -166,7 +164,7 @@ export class AIService {
   }
 
   /**
-   * Generates a Suspicious Activity Report (SAR) markdown dossier
+   * Generates a formal Suspicious Activity Report (SAR) in Markdown format
    */
   async generateSARReport(
     caseId: string,
@@ -249,82 +247,86 @@ Active Nodes: ${graphContext?.nodes?.length || 0} | Active Transfers: ${graphCon
 Flagged Heuristics: ${graphContext?.detectedPatterns?.map((p: any) => p.title).join(', ') || 'None'}
 ${selectedNodeSummary}
 
-${backboardMemory ? `PERSISTENT CASE MEMORY (Backboard):\n${backboardMemory}\n` : ''}
+Backboard Memory / Investigator Annotations:
+${backboardMemory || 'None recorded yet.'}
 
-USER INVESTIGATOR QUERY:
-"${userMessage}"
-
-Analyze the transaction graph data and provide a clear, factual, plain-English forensic deduction.`;
+Investigator Question: ${userMessage}`;
 
     const result = await this.generateWithGeminiCascade(prompt, systemInstruction);
     return result?.text || null;
   }
 
   private async queryTinker(
-    userMessage: string,
-    graphContext: any,
-    backboardMemory: string,
-    selectedNodeId?: string
-  ): Promise<string | null> {
-    const payload = {
-      model: 'tinker-forensics-v1',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are ChainSleuth On-Chain Forensics Copilot analyzing multi-hop transaction topologies.',
-        },
-        {
-          role: 'user',
-          content: `Context: ${JSON.stringify({ graphContext, backboardMemory, selectedNodeId })}\nQuery: ${userMessage}`,
-        },
-      ],
-    };
-
-    const res = await axios.post(`${this.tinkerApiUrl}/chat/completions`, payload, {
-      headers: {
-        Authorization: `Bearer ${this.tinkerApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 8000,
-    });
-
-    return res.data?.choices?.[0]?.message?.content || null;
-  }
-
-  /**
-   * Deterministic Forensic Analyst Fallback
-   * Uses real graph topology metrics to answer common investigator queries accurately.
-   */
-  private generateHeuristicResponse(
     message: string,
     graphContext: any,
     backboardMemory: string,
     selectedNodeId?: string
+  ): Promise<string | null> {
+    const res = await axios.post(
+      `${this.tinkerApiUrl}/chat/completions`,
+      {
+        model: 'tinker-forensics-v1',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are ChainSleuth AI Forensics Copilot. Analyze the on-chain graph topology and answer investigator inquiries with precision.',
+          },
+          {
+            role: 'user',
+            content: `Context: ${JSON.stringify(graphContext)}\nSelected: ${selectedNodeId}\nQuery: ${message}`,
+          },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.tinkerApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      }
+    );
+    return res.data?.choices?.[0]?.message?.content || null;
+  }
+
+  /**
+   * Deterministic Forensic Reasoning Engine Fallback
+   */
+  private generateHeuristicResponse(
+    userMessage: string,
+    graphContext: any,
+    backboardMemory: string,
+    selectedNodeId?: string
   ): string {
-    const query = message.toLowerCase();
+    const query = userMessage.toLowerCase();
     const nodes: GraphNode[] = graphContext?.nodes || [];
-    const edges: GraphEdge[] = graphContext?.edges || [];
     const patterns = graphContext?.detectedPatterns || [];
 
-    // If query is about selected node
+    // Query: Inspected specific node
     if (selectedNodeId) {
       const node = nodes.find((n) => n.id.toLowerCase() === selectedNodeId.toLowerCase());
       if (node) {
-        return `### Forensic Profile: \`${node.id}\`
-- **Entity Classification**: **${node.category}** (Risk Score: \`${node.riskScore}/100\`)
-- **Cumulative Flow**: **${node.totalInMatic.toLocaleString()} MATIC** received across ${node.inDegree} inbound transfer(s); **${node.totalOutMatic.toLocaleString()} MATIC** dispersed across ${node.outDegree} outbound transfer(s).
-- **Current Retained Balance**: **${node.balanceMatic.toLocaleString()} MATIC**.
-- **Role in Laundering Topology**: ${
-          node.category === 'PEEL_HOP'
-            ? 'Acts as an intermediary rapid-peel splitter forwarding >70% of inbound funds within minutes to break linear graph attribution.'
-            : node.category === 'MIXER'
-            ? 'Identified as an OFAC-sanctioned mixer deposit router (Tornado Cash / Railgun) designed to break determinism between deposit and withdrawal keys.'
-            : node.category === 'EXCHANGE'
-            ? 'Identified as a centralized exchange (CEX) deposit gateway with KYC requirements; prime candidate for immediate exchange subpoena or asset freeze.'
-            : node.category === 'BURNER'
-            ? 'Fresh disposable burner address active for < 30 minutes, likely created programmatically by a smurfing script.'
-            : 'Initial root address where funds were consolidated post-exploit.'
-        }`;
+        return `### Forensic Profile for Inspected Entity: **${node.label || node.alias || node.id}**
+- **Address**: \`${node.id}\`
+- **Entity Classification**: **${node.category}**
+- **Threat Risk Score**: **${node.riskScore}/100**
+- **Current Balance**: **${node.balanceMatic?.toLocaleString()} MATIC**
+- **Cumulative Inflow**: **${node.totalInMatic?.toLocaleString()} MATIC** (${node.inDegree} transfers)
+- **Cumulative Outflow**: **${node.totalOutMatic?.toLocaleString()} MATIC** (${node.outDegree} transfers)
+- **Forensic Tags**: ${node.tags.join(', ') || 'None'}
+
+**Forensic Attribution**:
+${
+  node.category === 'PEEL_HOP'
+    ? 'Identified as an intermediate peel splitter in a multi-hop money laundering chain forwarding funds within minutes.'
+    : node.category === 'MIXER'
+    ? 'Identified as an OFAC-sanctioned mixer deposit router (Tornado Cash / Railgun) designed to break determinism between deposit and withdrawal keys.'
+    : node.category === 'EXCHANGE'
+    ? 'Identified as a centralized exchange (CEX) deposit gateway with KYC requirements; prime candidate for immediate exchange subpoena or asset freeze.'
+    : node.category === 'BURNER'
+    ? 'Fresh disposable burner address active for < 30 minutes, likely created programmatically by a smurfing script.'
+    : 'Initial root address where funds were consolidated post-exploit.'
+}`;
       }
     }
 

@@ -2,7 +2,7 @@
  * Top Command Bar for ChainSleuth
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   Search,
@@ -13,7 +13,6 @@ import {
   Cpu,
   Layers,
   Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import { SystemHealth } from '../types.js';
 
@@ -36,6 +35,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [searchInput, setSearchInput] = useState(currentAddress);
   const [selectedNetwork, setSelectedNetwork] = useState(network);
+
+  useEffect(() => {
+    setSearchInput(currentAddress);
+  }, [currentAddress]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -211,7 +211,6 @@ I have synchronized the multi-hop transaction graph with **Backboard Case Memory
 
       if (res.ok) {
         fetchTags(selectedNodeId);
-        // Also update node label in active scan data
         if (scanData) {
           setScanData({
             ...scanData,
@@ -291,7 +290,6 @@ I have synchronized the multi-hop transaction graph with **Backboard Case Memory
   };
 
   const handleNewRealtimeAlert = (alert: HighRiskAlert) => {
-    // Add real-time notification to copilot chat
     setChatMessages((prev) => [
       ...prev,
       {
@@ -308,7 +306,6 @@ I have synchronized the multi-hop transaction graph with **Backboard Case Memory
       },
     ]);
 
-    // Prepend to active transactions ledger
     if (scanData) {
       const exists = scanData.transactions.some((t) => t.hash === alert.txHash);
       if (!exists) {
@@ -412,7 +409,7 @@ I have synchronized the multi-hop transaction graph with **Backboard Case Memory
         </aside>
       </main>
 
-      {/* Suspicious Activity Report (SAR) Modal */}
+      {/* Suspicious Activity Report (SAR) Modal with PDF Export Option */}
       <SARReportModal
         isOpen={isSARModalOpen}
         onClose={() => setIsSARModalOpen(false)}

@@ -98,37 +98,22 @@ export const REALISTIC_HEIST_DATASET: {
       hash: '0x2233440192830192830192830192830192830192830192830192830192830192',
       from: '0x7c94019283019284918293849182938491829384',
       to: '0x8d22019283019284918293849182938491829384', // Burner Relay 2
-      value: '135000',
-      timeStamp: 1718000890,
+      value: '140000',
+      timeStamp: 1718000900,
     },
     {
       hash: '0x3344550192830192830192830192830192830192830192830192830192830192',
-      from: '0x7c94019283019284918293849182938491829384',
-      to: '0x8d33019283019284918293849182938491829384', // Burner Relay 3
-      value: '137000',
-      timeStamp: 1718000920,
+      from: '0x8d11019283019284918293849182938491829384',
+      to: '0x99238bf10248ad9081273849182049182390192a', // Binance Deposit 4
+      value: '138500',
+      timeStamp: 1718001020,
     },
     {
       hash: '0x4455660192830192830192830192830192830192830192830192830192830192',
-      from: '0x7c94019283019284918293849182938491829384',
-      to: '0x8d44019283019284918293849182938491829384', // Burner Relay 4
-      value: '138000',
-      timeStamp: 1718000950,
-    },
-    // 8. Cash-Out Destination: Burner relays deposit into CEX hot wallets
-    {
-      hash: '0x5566770192830192830192830192830192830192830192830192830192830192',
-      from: '0x8d11019283019284918293849182938491829384',
-      to: '0x99238bf10248ad9081273849182049182390192a', // Binance Deposit
-      value: '140000',
-      timeStamp: 1718001080,
-    },
-    {
-      hash: '0x6677880192830192830192830192830192830192830192830192830192830192',
       from: '0x8d22019283019284918293849182938491829384',
-      to: '0x72a53cddb06418eb397f4418528372316443c29f', // OKX Deposit
+      to: '0x72a53cddb06418eb397f4418528372316443c29f', // OKX Deposit Proxy
       value: '135000',
-      timeStamp: 1718001120,
+      timeStamp: 1718001080,
     },
   ],
 };
@@ -137,21 +122,27 @@ export class BlockchainService {
   private polygonscanApiKey: string;
 
   constructor() {
-    this.polygonscanApiKey = process.env.POLYGONSCAN_API_KEY || '';
+    this.polygonscanApiKey =
+      process.env.POLYGONSCAN_API_KEY ||
+      process.env.ETHERSCAN_API_KEY ||
+      '';
   }
 
   get hasApiKey(): boolean {
-    return Boolean(this.getApiKey());
-  }
-
-  getApiKey(): string {
-    return (process.env.POLYGONSCAN_API_KEY || this.polygonscanApiKey || '').trim();
+    return (
+      Boolean(this.polygonscanApiKey) &&
+      this.polygonscanApiKey.trim().length > 0 &&
+      this.polygonscanApiKey !== 'MY_POLYGONSCAN_API_KEY'
+    );
   }
 
   /**
-   * Fetches normal and internal transactions for a wallet or generates multi-hop graph
+   * Scans an address either via Polygonscan/Etherscan v2 API or returns rich heist scenario.
    */
-  async scanWallet(walletAddress: string, network = 'polygon'): Promise<{
+  async scanWallet(
+    walletAddress: string,
+    network = 'polygon'
+  ): Promise<{
     walletAddress: string;
     network: string;
     summary: string;
@@ -159,25 +150,21 @@ export class BlockchainService {
     analysis: HeuristicResult;
     source: 'live_polygonscan' | 'demo_heist_dataset';
   }> {
-    const cleanAddress = (walletAddress || '').trim().toLowerCase();
-    const apiKey = this.getApiKey();
+    const cleanAddress = walletAddress.trim().toLowerCase();
 
-    // If matching demo heist address or no API key, use realistic dataset
-    if (
-      cleanAddress === SAMPLE_HEIST_WALLET.toLowerCase() ||
-      !apiKey ||
-      cleanAddress.startsWith('0x0000') ||
-      cleanAddress.length < 10
-    ) {
-      return this.getDemoExploitCase(cleanAddress || SAMPLE_HEIST_WALLET);
+    // If no API key configured or demo address requested, return rich demo dataset
+    if (!this.hasApiKey || cleanAddress === SAMPLE_HEIST_WALLET.toLowerCase()) {
+      return this.getDemoExploitCase(cleanAddress);
     }
 
     try {
-      // Etherscan v2 unified API supports chainid=137 for Polygon and chainid=1 for Ethereum
-      const chainId = network === 'ethereum' ? '1' : '137';
+      // Polygon Mainnet chainid = 137, Ethereum Mainnet chainid = 1
+      const isEthereum = network.toLowerCase().includes('eth');
+      const chainId = isEthereum ? 1 : 137;
       const v2Url = 'https://api.etherscan.io/v2/api';
+      const apiKey = this.polygonscanApiKey.trim();
 
-      // 1. Fetch native EVM transactions
+      // 1. Fetch normal transactions via unified Etherscan v2 API
       const txResponse = await axios.get(v2Url, {
         params: {
           chainid: chainId,
@@ -187,8 +174,8 @@ export class BlockchainService {
           startblock: 0,
           endblock: 99999999,
           page: 1,
-          offset: 50,
-          sort: 'asc',
+          offset: 40,
+          sort: 'desc',
           apikey: apiKey,
         },
         timeout: 8000,

@@ -99,7 +99,7 @@ export function createApiRouter() {
         heuristics: scanResult.analysis.detectedPatterns,
         graph: {
           nodes: scanResult.analysis.nodes,
-          links: scanResult.analysis.edges, // alias links for graph visualizers
+          links: scanResult.analysis.edges,
           edges: scanResult.analysis.edges,
         },
         transactions: scanResult.rawTransactions,

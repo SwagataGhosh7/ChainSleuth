@@ -99,241 +99,186 @@ export const TransactionLedger: React.FC<TransactionLedgerProps> = ({
 
   const formatTime = (ts: string | number) => {
     try {
-      const num = Number(ts);
-      const date = num > 1e11 ? new Date(num) : new Date(num * 1000);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const d = new Date(Number(ts) * 1000);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch {
       return String(ts);
     }
   };
 
-  const handleExportToCSV = () => {
-    const listToExport = filteredTxs.length > 0 ? filteredTxs : parsedTxs;
-    if (listToExport.length === 0) return;
-
-    const headers = [
-      'Transaction Hash',
-      'From Address',
-      'To Address',
-      'Value (MATIC)',
-      'Estimated Value (USD)',
-      'Timestamp (UTC)',
-      'Raw Timestamp',
-      'Heuristic Risk Tag',
-      'Suspicious Flag',
-    ];
-
-    const escapeCSV = (val: string | number | boolean | undefined | null) => {
-      if (val === undefined || val === null) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const rows = listToExport.map((tx) => {
-      let dateIso = '';
-      try {
-        const num = Number(tx.timeStamp);
-        const d = num > 1e11 ? new Date(num) : new Date(num * 1000);
-        dateIso = d.toISOString();
-      } catch {
-        dateIso = String(tx.timeStamp);
-      }
-
-      return [
-        escapeCSV(tx.hash),
-        escapeCSV(tx.from),
-        escapeCSV(tx.to),
-        tx.valueMatic.toFixed(6),
-        (tx.valueUsd || tx.valueMatic * 0.75).toFixed(2),
-        escapeCSV(dateIso),
-        escapeCSV(tx.timeStamp),
-        escapeCSV(tx.heuristicTag || 'Standard Hop'),
-        escapeCSV(tx.isSuspicious ? 'TRUE' : 'FALSE'),
-      ].join(',');
-    });
-
-    const csvContent = [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const filterSuffix = selectedNodeId ? `-${selectedNodeId.slice(0, 8)}` : '';
-    link.download = `ChainSleuth-audit-transactions${filterSuffix}-${Date.now()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Alias for backward compatibility
-  const handleDownloadCSV = handleExportToCSV;
-
   return (
-    <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden shadow-sm flex flex-col">
-      {/* Table Header Controls */}
-      <div className="p-3.5 border-b border-[#30363d] flex flex-wrap items-center justify-between gap-3 bg-[#161b22]/70">
+    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden shadow-lg flex flex-col">
+      {/* Table Header & Controls */}
+      <div className="p-3.5 sm:p-4 border-b border-[#21262d] flex flex-wrap items-center justify-between gap-3 bg-[#161b22]">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-[#f0f6fc] font-sans">
-            Forensic Transaction Ledger
-          </span>
-          <span className="text-[11px] text-[#8b949e] font-mono">
-            ({filteredTxs.length} of {parsedTxs.length} transfers)
-          </span>
-          {selectedNodeId && (
-            <span className="text-[11px] bg-[#58a6ff]/10 text-[#58a6ff] border border-[#388bfd]/30 px-2 py-0.5 rounded font-mono flex items-center gap-1">
-              <span>Filtered by {selectedNodeId.slice(0, 6)}...{selectedNodeId.slice(-4)}</span>
-              <button onClick={() => onSelectNode(null)} className="hover:text-white font-bold ml-1">
-                ×
-              </button>
+          <h3 className="text-xs font-bold text-[#f0f6fc] font-sans flex items-center gap-2">
+            <span>On-Chain Transaction Ledger</span>
+            <span className="text-[11px] font-mono text-[#8b949e] font-normal">
+              ({filteredTxs.length} records)
             </span>
-          )}
+          </h3>
         </div>
 
-        {/* Search, Sort & Export Controls */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56">
-            <Search className="w-3.5 h-3.5 text-[#8b949e] absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              placeholder="Filter by hash or 0x..."
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded-md pl-8 pr-2.5 py-1 text-xs font-mono text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none focus:border-[#58a6ff]"
-            />
+        {/* Search Filter */}
+        <div className="relative min-w-[200px]">
+          <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-[#8b949e]">
+            <Search className="w-3.5 h-3.5" />
           </div>
-
-          <button
-            onClick={() => {
-              if (sortField === 'value') setSortAsc(!sortAsc);
-              else {
-                setSortField('value');
-                setSortAsc(false);
-              }
-            }}
-            className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-colors ${
-              sortField === 'value'
-                ? 'bg-[#21262d] text-[#58a6ff] border-[#388bfd]/40'
-                : 'text-[#8b949e] border-[#30363d] hover:bg-[#21262d]'
-            }`}
-          >
-            Sort by Value
-          </button>
-
-          <button
-            onClick={handleExportToCSV}
-            disabled={parsedTxs.length === 0}
-            className="px-2.5 py-1 text-xs font-mono rounded-md border border-[#30363d] hover:border-[#58a6ff]/50 bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] hover:text-[#f0f6fc] transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-            title="Export to CSV for external audit"
-            aria-label="Export to CSV"
-            data-testid="export-to-csv"
-          >
-            <Download className="w-3.5 h-3.5 text-[#58a6ff]" />
-            <span>Export to CSV</span>
-          </button>
+          <input
+            type="text"
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Filter hash, sender, recipient..."
+            className="w-full bg-[#0d1117] border border-[#30363d] focus:border-[#58a6ff] rounded-lg pl-8 pr-2.5 py-1 text-xs font-mono text-[#f0f6fc] placeholder-[#6e7681] focus:outline-none"
+          />
         </div>
       </div>
 
-      {/* Ledger Table */}
-      <div className="overflow-x-auto min-h-[300px] max-h-[360px] overflow-y-auto">
-        <table className="w-full text-left text-xs font-mono">
-          <thead className="bg-[#0d1117] text-[#8b949e] border-b border-[#30363d] sticky top-0 z-10 uppercase text-[10px] tracking-wider">
+      {/* Table Data */}
+      <div className="overflow-x-auto max-h-[360px] overflow-y-auto">
+        <table className="w-full text-left border-collapse font-mono text-xs">
+          <thead className="bg-[#0d1117]/80 sticky top-0 border-b border-[#21262d] text-[11px] text-[#8b949e] uppercase select-none">
             <tr>
               <th className="py-2.5 px-3">Tx Hash</th>
-              <th className="py-2.5 px-3">From</th>
-              <th className="py-2.5 px-3">To</th>
-              <th className="py-2.5 px-3 text-right">Value (MATIC)</th>
-              <th className="py-2.5 px-3">Timestamp</th>
-              <th className="py-2.5 px-3">Heuristic Flag</th>
+              <th
+                className="py-2.5 px-3 cursor-pointer hover:text-[#f0f6fc]"
+                onClick={() => {
+                  setSortField('time');
+                  setSortAsc(!sortAsc);
+                }}
+              >
+                Time {sortField === 'time' && (sortAsc ? '↑' : '↓')}
+              </th>
+              <th className="py-2.5 px-3">From Address</th>
+              <th className="py-2.5 px-3">To Address</th>
+              <th
+                className="py-2.5 px-3 text-right cursor-pointer hover:text-[#f0f6fc]"
+                onClick={() => {
+                  setSortField('value');
+                  setSortAsc(!sortAsc);
+                }}
+              >
+                Amount {sortField === 'value' && (sortAsc ? '↑' : '↓')}
+              </th>
+              <th className="py-2.5 px-3 text-center">Heuristic Tag</th>
+              <th className="py-2.5 px-2 text-center">Explorer</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#21262d]">
+          <tbody className="divide-y divide-[#21262d] text-[#c9d1d9]">
             {filteredTxs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[#8b949e]">
-                  No transactions match the selected filter criteria.
+                <td colSpan={7} className="py-8 text-center text-[#8b949e]">
+                  No matching transactions found for current filter.
                 </td>
               </tr>
             ) : (
-              filteredTxs.map((tx) => (
-                <tr
-                  key={tx.hash}
-                  className="hover:bg-[#21262d]/50 transition-colors group text-[#c9d1d9]"
-                >
-                  {/* Hash */}
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[#58a6ff] font-mono">
-                        {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
-                      </span>
-                      <button
-                        onClick={() => handleCopy(tx.hash)}
-                        className="text-[#8b949e] hover:text-[#f0f6fc] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                        title="Copy Hash"
-                      >
-                        {copiedHash === tx.hash ? (
+              filteredTxs.map((tx) => {
+                const isSelectedHash = tx.hash === copiedHash;
+
+                return (
+                  <tr
+                    key={tx.hash}
+                    className="hover:bg-[#21262d]/50 transition-colors group text-[11px]"
+                  >
+                    {/* Hash */}
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleCopy(tx.hash)}
+                          className="text-[#58a6ff] hover:underline font-mono"
+                          title="Copy Full Transaction Hash"
+                        >
+                          {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
+                        </button>
+                        {isSelectedHash ? (
                           <Check className="w-3 h-3 text-[#3fb950]" />
                         ) : (
-                          <Copy className="w-3 h-3" />
+                          <button
+                            onClick={() => handleCopy(tx.hash)}
+                            className="opacity-0 group-hover:opacity-100 text-[#8b949e] hover:text-[#f0f6fc]"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
                         )}
+                      </div>
+                    </td>
+
+                    {/* Timestamp */}
+                    <td className="py-2 px-3 whitespace-nowrap text-[#8b949e]">
+                      {formatTime(tx.timeStamp)}
+                    </td>
+
+                    {/* From */}
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <button
+                        onClick={() => onSelectNode(tx.from)}
+                        className={`hover:underline font-mono ${
+                          selectedNodeId?.toLowerCase() === tx.from.toLowerCase()
+                            ? 'text-[#58a6ff] font-bold'
+                            : 'text-[#c9d1d9]'
+                        }`}
+                      >
+                        {tx.from.slice(0, 6)}...{tx.from.slice(-4)}
                       </button>
+                    </td>
+
+                    {/* To */}
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      <button
+                        onClick={() => onSelectNode(tx.to)}
+                        className={`hover:underline font-mono ${
+                          selectedNodeId?.toLowerCase() === tx.to.toLowerCase()
+                            ? 'text-[#58a6ff] font-bold'
+                            : 'text-[#c9d1d9]'
+                        }`}
+                      >
+                        {tx.to.slice(0, 6)}...{tx.to.slice(-4)}
+                      </button>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="py-2 px-3 whitespace-nowrap text-right">
+                      <span className="font-bold text-[#f0f6fc]">
+                        {tx.valueMatic.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
+                        <span className="text-[#8b949e] text-[10px] font-normal">MATIC</span>
+                      </span>
+                      <span className="text-[10px] text-[#8b949e] block">
+                        ~${tx.valueUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                    </td>
+
+                    {/* Heuristic Tag */}
+                    <td className="py-2 px-3 whitespace-nowrap text-center">
+                      {tx.heuristicTag ? (
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            tx.isSuspicious
+                              ? 'bg-[#f85149]/15 text-[#f85149] border border-[#f85149]/30'
+                              : 'bg-[#21262d] text-[#c9d1d9] border border-[#30363d]'
+                          }`}
+                        >
+                          {tx.heuristicTag.replace(/_/g, ' ')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-[#8b949e]">—</span>
+                      )}
+                    </td>
+
+                    {/* Explorer */}
+                    <td className="py-2 px-2 text-center whitespace-nowrap">
                       <a
                         href={`https://polygonscan.com/tx/${tx.hash}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[#8b949e] hover:text-[#58a6ff] opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
+                        className="text-[#8b949e] hover:text-[#58a6ff] inline-block p-1"
                         title="View on Polygonscan"
                       >
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </a>
-                    </div>
-                  </td>
-
-                  {/* From */}
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    <button
-                      onClick={() => onSelectNode(tx.from)}
-                      className="hover:text-[#58a6ff] hover:underline transition-colors text-left font-mono"
-                    >
-                      {tx.from.slice(0, 6)}...{tx.from.slice(-4)}
-                    </button>
-                  </td>
-
-                  {/* To */}
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    <button
-                      onClick={() => onSelectNode(tx.to)}
-                      className="hover:text-[#58a6ff] hover:underline transition-colors text-left font-mono"
-                    >
-                      {tx.to.slice(0, 6)}...{tx.to.slice(-4)}
-                    </button>
-                  </td>
-
-                  {/* Value */}
-                  <td className="py-2 px-3 text-right whitespace-nowrap tabular-nums">
-                    <span className="font-bold text-[#f0f6fc]">
-                      {tx.valueMatic.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
-                    </span>
-                    <span className="text-[10px] text-[#8b949e]">MATIC</span>
-                  </td>
-
-                  {/* Timestamp */}
-                  <td className="py-2 px-3 whitespace-nowrap text-[#8b949e] tabular-nums">
-                    {formatTime(tx.timeStamp)}
-                  </td>
-
-                  {/* Heuristic Flag */}
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    {tx.heuristicTag ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-[#ff7b72]/10 text-[#ff7b72] border border-[#ff7b72]/30 font-mono">
-                        <Flame className="w-3 h-3" />
-                        <span>{tx.heuristicTag}</span>
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-[#8b949e]">Standard Hop</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
