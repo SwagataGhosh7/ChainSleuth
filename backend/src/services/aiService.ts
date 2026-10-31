@@ -5,7 +5,7 @@
  * Includes intelligent deterministic forensic reasoning engine as resilient fallback.
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import axios from 'axios';
 import { backboardService } from './backboardService.js';
 import { GraphNode, GraphEdge, HeuristicResult } from './forensicHeuristics.js';
@@ -30,6 +30,7 @@ export class AIService {
   private geminiClient: GoogleGenAI | null = null;
   private tinkerApiKey: string;
   private tinkerApiUrl: string;
+  private cooldownUntil = 0;
 
   constructor() {
     this.tinkerApiKey = process.env.TINKER_API_KEY || '';
@@ -61,8 +62,8 @@ export class AIService {
           },
         });
         return this.geminiClient;
-      } catch (err) {
-        console.warn('Failed to initialize Gemini client:', err);
+      } catch {
+        return null;
       }
     }
     return null;
@@ -96,20 +97,20 @@ export class AIService {
         if (tinkerReply) {
           return { reply: tinkerReply, provider: 'tinker', memoryUpdated: true };
         }
-      } catch (err) {
-        console.warn('Tinker AI inference failed, routing to Gemini / Heuristic Engine:', (err as any)?.message);
+      } catch {
+        // Fall through to Gemini or heuristic fallback
       }
     }
 
     // 3. Query Google Gemini via @google/genai
-    if (this.hasGemini) {
+    if (this.hasGemini && Date.now() >= this.cooldownUntil) {
       try {
         const geminiReply = await this.queryGemini(message, graphContext, backboardData.formattedSummary, selectedNodeId);
         if (geminiReply) {
           return { reply: geminiReply, provider: 'gemini', memoryUpdated: true };
         }
-      } catch (err) {
-        console.warn('Gemini generateContent call failed, using intelligent heuristic engine:', (err as any)?.message);
+      } catch {
+        // Graceful fallback to deterministic forensic engine
       }
     }
 
@@ -120,31 +121,38 @@ export class AIService {
 
   /**
    * Resilient Gemini model cascade:
-   * Primary 'gemini-3.8-flash' first, smooth cascade to 'gemini-3.1-flash-lite'.
+   * Uses low thinking latency and non-blocking timeout fallback.
    */
   private async generateWithGeminiCascade(
     contents: string,
     systemInstruction?: string
   ): Promise<{ text: string; model: string } | null> {
+    if (Date.now() < this.cooldownUntil) {
+      return null;
+    }
+
     const client = this.initGeminiClient();
     if (!client) return null;
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
 
     for (let i = 0; i < candidateModels.length; i++) {
       const model = candidateModels[i];
-      const attemptTimeout = i === 0 ? 10000 : 30000;
+      const attemptTimeout = i === 0 ? 6000 : 4000;
       let timer: NodeJS.Timeout | null = null;
 
       try {
         const callPromise = client.models.generateContent({
           model,
           contents,
-          ...(systemInstruction ? { config: { systemInstruction } } : {}),
+          config: {
+            ...(systemInstruction ? { systemInstruction } : {}),
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
         });
 
         const timeoutPromise = new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error(`${model} request timed out`)), attemptTimeout);
+          timer = setTimeout(() => reject(new Error('timeout')), attemptTimeout);
           if (timer.unref) timer.unref();
         });
 
@@ -154,9 +162,10 @@ export class AIService {
         if (response?.text && response.text.trim().length > 0) {
           return { text: response.text, model };
         }
-      } catch (err: any) {
+      } catch {
         if (timer) clearTimeout(timer);
-        console.warn(`Gemini inference with ${model} failed (${err?.message || err}), trying fallback...`);
+        // Cool down for 30s to avoid repeated blocking delays during rate limits or server spikes
+        this.cooldownUntil = Date.now() + 30000;
       }
     }
 
@@ -173,7 +182,7 @@ export class AIService {
   ): Promise<string> {
     const backboardData = await backboardService.getCaseContext(caseId);
 
-    if (this.hasGemini) {
+    if (this.hasGemini && Date.now() >= this.cooldownUntil) {
       try {
         const detectedPatterns = (graphContext?.detectedPatterns || []).map((p: any) => ({
           title: p.title,
@@ -206,8 +215,8 @@ Include the following standardized sections:
         if (result?.text) {
           return result.text;
         }
-      } catch (e: any) {
-        console.warn('Gemini SAR generation error, using heuristic fallback:', e?.message || e);
+      } catch {
+        // Fall back gracefully to heuristic SAR report
       }
     }
 
