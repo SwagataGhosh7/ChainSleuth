@@ -1,4 +1,5 @@
 version: '3.8'
+# so in linux if docker does't work then we can comment out the first line of vesion in linux if it doesnn't woork .... 
 
 services:
   # DigitalOcean / Local PostgreSQL Database
