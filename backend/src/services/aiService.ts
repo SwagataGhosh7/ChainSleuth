@@ -110,6 +110,53 @@ export class AIService {
   }
 
   /**
+   * Resilient Gemini model cascade:
+   * Queries primary 'gemini-3.8-flash' first. If it encounters a transient spike (503 unavailable)
+   * or exceeds 10s, smoothly cascades to 'gemini-3.1-flash-lite' (high-throughput, ultra-low latency).
+   */
+  private async generateWithGeminiCascade(
+    contents: string,
+    systemInstruction?: string
+  ): Promise<{ text: string; model: string } | null> {
+    const client = this.initGeminiClient();
+    if (!client) return null;
+
+    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+
+    for (let i = 0; i < candidateModels.length; i++) {
+      const model = candidateModels[i];
+      // 10s attempt timeout for gemini-3.8-flash allowing rapid failover if 3.8 is busy; 45s for 3.1-flash-lite
+      const attemptTimeout = i === 0 ? 10000 : 45000;
+      let timer: NodeJS.Timeout | null = null;
+
+      try {
+        const callPromise = client.models.generateContent({
+          model,
+          contents,
+          ...(systemInstruction ? { config: { systemInstruction } } : {}),
+        });
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`${model} request timed out`)), attemptTimeout);
+          if (timer.unref) timer.unref();
+        });
+
+        const response = await Promise.race([callPromise, timeoutPromise]);
+        if (timer) clearTimeout(timer);
+
+        if (response?.text && response.text.trim().length > 0) {
+          return { text: response.text, model };
+        }
+      } catch (err: any) {
+        if (timer) clearTimeout(timer);
+        console.warn(`Gemini inference with ${model} failed (${err?.message || err}), trying fallback...`);
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Generates a Suspicious Activity Report (SAR) markdown dossier
    */
   async generateSARReport(
@@ -118,10 +165,8 @@ export class AIService {
     graphContext: any
   ): Promise<string> {
     const backboardData = await backboardService.getCaseContext(caseId);
-    const client = this.initGeminiClient();
 
-    if (client) {
-      let timeoutHandle: NodeJS.Timeout | null = null;
+    if (this.hasGemini) {
       try {
         const detectedPatterns = (graphContext?.detectedPatterns || []).map((p: any) => ({
           title: p.title,
@@ -150,25 +195,12 @@ Include the following standardized sections:
 4. CASH-OUT ENDPOINTS & CENTRALIZED EXCHANGE RECEPTACLES
 5. REGULATORY SAR FINDINGS & RECOMMENDED FREEZE ACTIONS`;
 
-        const callPromise = client.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-        });
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error('Gemini SAR generation timed out')), 35000);
-        });
-
-        const response = await Promise.race([callPromise, timeoutPromise]);
-        if (response?.text) {
-          return response.text;
+        const result = await this.generateWithGeminiCascade(prompt);
+        if (result?.text) {
+          return result.text;
         }
       } catch (e: any) {
-        console.warn('Gemini SAR generation error, using heuristic report:', e?.message || e);
-      } finally {
-        if (timeoutHandle) {
-          clearTimeout(timeoutHandle);
-        }
+        console.warn('Gemini SAR generation error, using heuristic fallback:', e?.message || e);
       }
     }
 
@@ -181,9 +213,6 @@ Include the following standardized sections:
     backboardMemory: string,
     selectedNodeId?: string
   ): Promise<string | null> {
-    const client = this.initGeminiClient();
-    if (!client) return null;
-
     const systemInstruction = `You are ChainSleuth's autonomous AI On-Chain Forensics Copilot.
 You specialize in EVM and Polygon blockchain intelligence, multi-hop money laundering peel chains, mixer hops, and illicit finance detection.
 Always answer with high forensic rigor, referencing exact addresses, amounts, and timing intervals when available.
@@ -218,30 +247,8 @@ USER INVESTIGATOR QUERY:
 
 Analyze the transaction graph data and provide a clear, factual, plain-English forensic deduction.`;
 
-    let timeoutHandle: NodeJS.Timeout | null = null;
-    try {
-      const callPromise = client.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          systemInstruction,
-        },
-      });
-
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutHandle = setTimeout(() => reject(new Error('Gemini API request timed out')), 30000);
-      });
-
-      const response = await Promise.race([callPromise, timeoutPromise]);
-      return response?.text || null;
-    } catch (err: any) {
-      console.warn('Gemini query error:', err?.message || err);
-      return null;
-    } finally {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-    }
+    const result = await this.generateWithGeminiCascade(prompt, systemInstruction);
+    return result?.text || null;
   }
 
   private async queryTinker(

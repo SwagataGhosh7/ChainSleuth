@@ -45,7 +45,7 @@ export function createApiRouter() {
           status: aiService.hasTinker ? 'tinker_active' : aiService.hasGemini ? 'gemini_active' : 'heuristic_engine_active',
           tinkerConfigured: aiService.hasTinker,
           geminiConfigured: aiService.hasGemini,
-          activeModel: aiService.hasTinker ? 'tinker-forensics-v1' : aiService.hasGemini ? 'gemini-3.8-flash' : 'deterministic-heuristic-v1',
+          activeModel: aiService.hasTinker ? 'tinker-forensics-v1' : aiService.hasGemini ? 'gemini-3.8-flash / gemini-3.1-flash-lite' : 'deterministic-heuristic-v1',
         },
       },
     });
