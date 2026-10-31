@@ -17,7 +17,7 @@ An enterprise-grade, dark-mode cybersecurity and blockchain intelligence web app
 
 ### 1. Overview & Core Concept
 
-**ChainSleuth** (branded as *LedgerLens.tech | AI On-Chain Forensics*) bridges on-chain graph analysis with conversational AI reasoning for blockchain intelligence investigators, compliance officers, and Web3 security researchers.
+**ChainSleuth** (*AI On-Chain Forensics Copilot*) bridges on-chain graph analysis with conversational AI reasoning for blockchain intelligence investigators, compliance officers, and Web3 security researchers.
 
 - **Primary Goal**: Ingest any EVM/Polygon wallet address or pre-built exploit case, automatically reconstruct the directed transaction flow graph, flag suspicious anti-money-laundering (AML) heuristics (rapid peeling, wash trading, burner fan-out, mixer hops), and provide an autonomous AI Copilot that remembers investigator notes and tags across sessions.
 - **Target Persona**: Web3 security analysts, incident responders, law enforcement forensic specialists, and DeFi protocol risk teams tracking stolen assets.
@@ -45,7 +45,7 @@ Built strictly in accordance with cybersecurity and SaaS enterprise design guide
 
 #### C. Key User Workflows & Layout
 1. **Top Command Bar**:
-   - Single-line wordmark: **LedgerLens.tech** (`AI On-Chain Forensics`).
+   - Single-line wordmark: **ChainSleuth** (`AI On-Chain Forensics`).
    - Network selector (`Polygon Mainnet` / `Ethereum`), live address search bar (`0x...`), "Scan Wallet" button, and 1-click "Load Demo Heist Case" button.
    - Connection status indicators for `Render API`, `DigitalOcean DB`, `Backboard Memory`, and `Gemini/Tinker AI`.
 2. **Main Forensic Canvas (70% viewport)**:

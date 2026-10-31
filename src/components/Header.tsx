@@ -1,5 +1,5 @@
 /**
- * Top Command Bar for ChainSleuth / LedgerLens.tech
+ * Top Command Bar for ChainSleuth
  */
 
 import React, { useState } from 'react';
@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-base font-bold tracking-tight text-[#f0f6fc] font-sans">
-              LedgerLens.tech
+              ChainSleuth
             </span>
             <span className="text-xs text-[#8b949e] hidden sm:inline font-mono">
               / AI On-Chain Forensics
