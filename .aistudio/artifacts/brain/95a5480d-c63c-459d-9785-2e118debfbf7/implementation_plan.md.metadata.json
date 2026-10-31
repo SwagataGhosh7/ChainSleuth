@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan for ChainSleuth, an autonomous AI-powered on-chain forensics copilot and transaction graph visualizer for Polygon and EVM networks with Backboard case memory, PostgreSQL persistence, and Gemini/Tinker reasoning.",
+  "updatedAt": "2026-10-14T12:27:04.232573614Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

@@ -1,0 +1,6 @@
+{
+  "name": "ChainSleuth — AI On-Chain Forensics Copilot",
+  "description": "Autonomous AI-powered on-chain forensics copilot that tracks suspicious Polygon and EVM cryptocurrency transactions, maps multi-hop laundering graphs, and generates investigative reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
