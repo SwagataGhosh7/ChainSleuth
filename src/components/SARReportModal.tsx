@@ -226,8 +226,8 @@ export const SARReportModal: React.FC<SARReportModalProps> = ({
         {/* Modal Header */}
         <div className="p-4 border-b border-[#30363d] flex flex-wrap items-center justify-between gap-3 bg-[#161b22] print:hidden">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#1f6feb]/20 border border-[#388bfd]/40 flex items-center justify-center text-[#58a6ff]">
-              <FileText className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-500/40 bg-[#0d1117] shrink-0 shadow-sm">
+              <img src="/chainsleuth-logo.jpeg" alt="ChainSleuth Logo" className="w-full h-full object-cover scale-105" />
             </div>
             <div>
               <div className="flex items-center gap-2">

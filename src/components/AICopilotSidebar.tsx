@@ -129,11 +129,11 @@ export const AICopilotSidebar: React.FC<AICopilotSidebarProps> = ({
       {/* Sidebar Header & Tabs */}
       <div className="border-b border-[#21262d] bg-[#161b22] p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#1f6feb]/20 border border-[#388bfd]/30 flex items-center justify-center text-[#58a6ff]">
-            <Brain className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-lg overflow-hidden border border-cyan-500/40 bg-[#0d1117] shrink-0 shadow-sm">
+            <img src="/chainsleuth-logo.jpeg" alt="ChainSleuth Logo" className="w-full h-full object-cover scale-105" />
           </div>
           <div>
-            <h2 className="text-xs font-bold text-[#f0f6fc] font-sans">AI Detective Copilot</h2>
+            <h2 className="text-xs font-bold text-[#f0f6fc] font-sans">ChainSleuth AI Copilot</h2>
             <p className="text-[10px] font-mono text-[#8b949e]">
               Backboard Case Memory Active
             </p>
@@ -296,8 +296,12 @@ export const AICopilotSidebar: React.FC<AICopilotSidebarProps> = ({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-3 h-3 text-[#58a6ff]" />
-                      <span className="font-semibold text-[#58a6ff]">
+                      <img
+                        src="/chainsleuth-logo.jpeg"
+                        alt="ChainSleuth AI"
+                        className="w-3.5 h-3.5 rounded-full object-cover border border-cyan-400/40 shrink-0"
+                      />
+                      <span className="font-semibold text-cyan-300">
                         ChainSleuth AI
                         {msg.provider ? ` (${msg.provider})` : ''}
                       </span>

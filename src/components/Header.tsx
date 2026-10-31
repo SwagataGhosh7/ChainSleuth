@@ -58,13 +58,17 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-[#21262d] bg-[#161b22]/95 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-6 py-2.5">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-3 max-w-[1700px] mx-auto">
-        {/* Brand & Wordmark */}
-        <div className="flex items-center gap-3 shrink-0 self-start lg:self-center">
-          <div className="flex items-center justify-center w-8 h-8 rounded bg-[#1f6feb]/20 border border-[#388bfd]/40 text-[#58a6ff]">
-            <ShieldAlert className="w-5 h-5 text-[#58a6ff]" />
+        {/* Brand & Wordmark with Primary ChainSleuth Logo */}
+        <div className="flex items-center gap-3 shrink-0 self-start lg:self-center group">
+          <div className="relative flex items-center justify-center w-9 h-9 rounded-xl overflow-hidden border border-cyan-500/40 bg-[#0d1117] shadow-[0_0_15px_rgba(6,182,212,0.25)] group-hover:border-cyan-400 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all">
+            <img
+              src="/chainsleuth-logo.jpeg"
+              alt="ChainSleuth Logo"
+              className="w-full h-full object-cover scale-105"
+            />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold tracking-tight text-[#f0f6fc] font-sans">
+            <span className="text-base font-extrabold tracking-tight text-[#f0f6fc] font-sans">
               ChainSleuth
             </span>
             <span className="text-xs text-[#8b949e] hidden sm:inline font-mono">
